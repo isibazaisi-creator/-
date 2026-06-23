@@ -1,0 +1,4424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Диаграмма Ганта — План отпусков 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --color-plan:#3B82F6;
+    --color-fact:#65A30D;
+    --color-empty:#ECECEC;
+    --color-header:#1E3A5F;
+    --color-bg:#F5F7FA;
+    --color-q1:#3B82F6;
+    --color-q2:#14B8A6;
+    --color-q3:#F59E0B;
+    --color-q4:#E11D6F;
+    --border-color:#E2E8F0;
+    --text-dark:#1E293B;
+    --text-muted:#64748B;
+    --day-w:2.9px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--color-bg);
+    color:var(--text-dark);
+    font-size:14px;
+  }
+  .app{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow:hidden;
+  }
+
+  /* ===== Header (sticky) ===== */
+  .top-sticky{
+    flex:0 0 auto;
+    background:var(--color-bg);
+    z-index:50;
+    border-bottom:1px solid var(--border-color);
+  }
+  .page-header{
+    padding:18px 24px 10px 24px;
+  }
+  .page-header h1{
+    margin:0;
+    font-size:22px;
+    font-weight:700;
+    color:var(--color-header);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .page-header h1 .icon{
+    font-size:22px;
+  }
+  .page-header p{
+    margin:4px 0 0 0;
+    color:var(--text-muted);
+    font-size:13px;
+  }
+
+  .filters-bar{
+    padding:12px 24px;
+    display:flex;
+    align-items:flex-start;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+  .filter-group{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .filter-group label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-dark);
+    white-space:nowrap;
+  }
+  select.f-select{
+    padding:8px 12px;
+    border:1px solid #D6DCE5;
+    border-radius:8px;
+    background:#fff;
+    font-size:13px;
+    min-width:160px;
+    color:var(--text-dark);
+    cursor:pointer;
+  }
+  input.f-search{
+    padding:8px 12px;
+    border:1px solid #D6DCE5;
+    border-radius:8px;
+    background:#fff;
+    font-size:13px;
+    min-width:220px;
+    color:var(--text-dark);
+  }
+  .search-hint{
+    font-size:11px;
+    color:var(--text-muted);
+    margin-top:2px;
+  }
+  .multiselect-wrap{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .multiselect-box{
+    width:340px;
+    max-height:128px;
+    overflow-y:auto;
+    border:1px solid #D6DCE5;
+    border-radius:8px;
+    background:#fff;
+  }
+  .ms-option{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 10px;
+    font-size:12.5px;
+    cursor:pointer;
+    border-bottom:1px solid #F1F3F6;
+  }
+  .ms-option:last-child{border-bottom:none;}
+  .ms-option:hover{background:#F5F8FF;}
+  .ms-option input[type=checkbox]{
+    cursor:pointer;
+    accent-color:var(--color-plan);
+  }
+  .ms-option .name{
+    flex:1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .ms-toolbar{
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .ms-toolbar button{
+    border:none;
+    background:#10B981;
+    color:#fff;
+    font-size:11px;
+    font-weight:600;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .ms-toolbar button.secondary{
+    background:#fff;
+    color:var(--text-dark);
+    border:1px solid #D6DCE5;
+  }
+
+  .actions-bar{
+    padding:0 24px 14px 24px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .btn-clear{
+    background:#fff;
+    color:#E11D48;
+    border:1px solid #FBCFE0;
+  }
+  .btn-clear:hover{background:#FFF1F4;}
+  .btn-export{
+    background:#2563EB;
+    color:#fff;
+  }
+  .btn-export:hover{background:#1D4ED8;}
+  .btn-import{
+    background:#fff;
+    color:#15803D;
+    border:1px solid #BBF0CE;
+  }
+  .btn-import:hover{background:#F0FBF4;}
+
+  .data-source-pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--text-muted);
+    background:#fff;
+    border:1px solid var(--border-color);
+    padding:7px 12px;
+    border-radius:8px;
+  }
+  .data-source-pill .dsp-dot{
+    width:7px;height:7px;
+    border-radius:50%;
+    background:#22C55E;
+    display:inline-block;
+    flex:0 0 auto;
+  }
+
+  .checkbox-pill{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dark);
+    cursor:pointer;
+    user-select:none;
+  }
+  .checkbox-pill input{
+    width:16px;height:16px;
+    cursor:pointer;
+  }
+  .checkbox-pill .dot{
+    width:10px;height:10px;
+    border-radius:50%;
+    display:inline-block;
+  }
+  .dot-plan{background:var(--color-plan);}
+  .dot-fact{background:var(--color-fact);}
+
+  .selected-counter{
+    font-size:12.5px;
+    color:var(--text-muted);
+    background:#fff;
+    border:1px solid var(--border-color);
+    padding:7px 12px;
+    border-radius:8px;
+  }
+
+  .sort-group{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .sort-group label{
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-dark);
+  }
+  .sort-btn{
+    border:1px solid #D6DCE5;
+    background:#fff;
+    border-radius:8px;
+    padding:7px 12px;
+    font-size:12.5px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    color:var(--text-dark);
+  }
+  .sort-btn.active{
+    background:#EFF6FF;
+    border-color:var(--color-plan);
+    color:#1D4ED8;
+  }
+
+  /* ===== Legend ===== */
+  .legend-bar{
+    padding:12px 24px;
+    background:#fff;
+    border-top:1px solid var(--border-color);
+    border-bottom:2px solid var(--border-color);
+    display:flex;
+    align-items:center;
+    gap:32px;
+    flex-wrap:wrap;
+  }
+  .legend-item{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:13px;
+    color:var(--text-dark);
+  }
+  .legend-swatch{
+    width:28px;height:16px;
+    border-radius:3px;
+    display:inline-block;
+  }
+  .legend-swatch.empty{
+    border:1px solid #D5D5D5;
+  }
+  .legend-divider{
+    width:1px;
+    height:22px;
+    background:var(--border-color);
+  }
+  .quarter-legend{
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
+  .quarter-legend .ql-label{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--text-muted);
+    margin-right:2px;
+  }
+  .q-chip{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12.5px;
+    color:var(--text-dark);
+  }
+  .q-swatch{
+    width:20px;height:12px;
+    border-radius:2px;
+  }
+
+  /* ===== Table area ===== */
+  .table-scroll-outer{
+    flex:1 1 auto;
+    overflow:auto;
+    position:relative;
+    background:#fff;
+  }
+  table.gantt-table{
+    border-collapse:separate;
+    border-spacing:0;
+    width:max-content;
+    min-width:100%;
+  }
+  table.gantt-table thead th{
+    background:var(--color-header);
+    color:#fff;
+    font-size:12px;
+    font-weight:600;
+    padding:9px 4px;
+    position:sticky;
+    top:0;
+    z-index:30;
+    text-align:center;
+    white-space:nowrap;
+    border-right:1px solid rgba(255,255,255,0.08);
+  }
+  table.gantt-table thead tr.month-row th{
+    top:0;
+  }
+  table.gantt-table thead tr.quarter-row th{
+    top:38px;
+    padding:5px 4px;
+    font-size:10.5px;
+    font-weight:700;
+    color:#fff;
+  }
+  /* sticky left columns */
+  .col-legal,.col-name,.col-plan,.col-fact,.col-diff{
+    position:sticky;
+    background:#fff;
+  }
+  thead .col-legal,thead .col-name,thead .col-plan,thead .col-fact,thead .col-diff{
+    background:var(--color-header);
+    z-index:35;
+  }
+  .col-legal{left:0;min-width:90px;text-align:left !important;padding-left:12px !important;}
+  .col-name{left:90px;min-width:170px;max-width:170px;text-align:left !important;padding-left:12px !important;}
+  .col-plan{left:260px;min-width:48px;max-width:48px;}
+  .col-fact{left:308px;min-width:48px;max-width:48px;}
+  .col-diff{left:356px;min-width:62px;max-width:62px;border-right:2px solid #C7CFDA !important;}
+
+  th.month-cell{
+    min-width:calc(var(--day-w) * 30);
+  }
+
+  tbody tr.data-row td{
+    border-bottom:1px solid #EEF1F5;
+    padding:0;
+    vertical-align:middle;
+  }
+  tbody tr.data-row:hover td{
+    background:#FAFCFF;
+  }
+  tbody tr.data-row:hover .col-legal,
+  tbody tr.data-row:hover .col-name,
+  tbody tr.data-row:hover .col-plan,
+  tbody tr.data-row:hover .col-fact,
+  tbody tr.data-row:hover .col-diff{
+    background:#FAFCFF;
+  }
+
+  td.col-legal,td.col-name,td.col-plan,td.col-fact,td.col-diff{
+    padding:8px 8px;
+    font-size:12.5px;
+  }
+  td.col-legal{color:var(--text-dark);font-weight:500;white-space:normal;word-break:break-word;font-size:12px;}
+  td.col-name{white-space:normal;}
+  td.col-name .fio{
+    font-weight:600;color:var(--text-dark);font-size:12.5px;line-height:1.25;
+    white-space:normal;word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  td.col-name .pos{
+    font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.25;
+    white-space:normal;word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  td.col-plan,td.col-fact{text-align:center;font-weight:600;color:var(--text-dark);}
+  td.col-diff{text-align:center;}
+  .diff-pill{
+    display:inline-block;
+    min-width:28px;
+    padding:3px 9px;
+    border-radius:999px;
+    background:#E7F6EC;
+    color:#15803D;
+    font-weight:700;
+    font-size:12.5px;
+  }
+  .diff-pill.zero{
+    background:#F1F2F4;
+    color:#6B7280;
+  }
+  .dash{color:var(--text-muted);}
+
+  /* group header rows */
+  tr.group-row td{
+    background:#EAF0F8;
+    font-weight:700;
+    color:var(--color-header);
+    padding:8px 14px !important;
+    font-size:13px;
+    position:relative;
+  }
+  tr.group-row td.group-sticky-cell{
+    position:sticky;
+    left:0;
+    background:#EAF0F8;
+    z-index:20;
+  }
+
+  /* month gantt cell */
+  td.gantt-cell{
+    position:relative;
+    height:56px;
+    padding:0 !important;
+  }
+  .month-track{
+    position:relative;
+    height:100%;
+    width:100%;
+  }
+  .bar{
+    position:absolute;
+    top:16px;
+    height:24px;
+    border-radius:5px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.12);
+  }
+  .bar.plan{background:var(--color-plan);}
+  .bar.fact{background:var(--color-fact);}
+
+  /* empty state */
+  .empty-state{
+    padding:60px 20px;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:14px;
+  }
+
+  /* scrollbar */
+  .table-scroll-outer::-webkit-scrollbar{
+    height:12px;width:12px;
+  }
+  .table-scroll-outer::-webkit-scrollbar-thumb{
+    background:#C7CFDA;
+    border-radius:6px;
+  }
+  .table-scroll-outer::-webkit-scrollbar-track{
+    background:#F0F2F5;
+  }
+
+  @media (max-width: 900px){
+    .filters-bar{flex-direction:column;}
+    .multiselect-box,input.f-search{width:100%;min-width:0;}
+    .sort-group{margin-left:0;}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script id="vacation-data" type="application/json">
+{
+ "employees": [
+  {
+   "fio": "Каплий Максим Станиславович",
+   "position": "Руководитель ПТУ",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-04-13",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-07-13",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Карас Игорь Давидович",
+   "position": "Водитель электропогрузчика",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-10-19",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Гаврилов Сергей Олегович",
+   "position": "Водитель электропогрузчика",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-02-15",
+     "planDays": 14,
+     "factStart": "2026-02-27",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Меньшиков Юрий Иванович",
+   "position": "Водитель электропогрузчика",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-08-01",
+     "planDays": 28,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Хурамов Бекзод Холович",
+   "position": "Водитель электропогрузчика",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-09-01",
+     "planDays": 28,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Шматченко Александр Иванович",
+   "position": "Водитель электропогрузчика",
+   "legal": "Каплий",
+   "periods": [
+    {
+     "planStart": "2026-03-03",
+     "planDays": 28,
+     "factStart": "2026-04-01",
+     "factDays": 28,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Данилов Павел Геннадиевич",
+   "position": "Механик",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-01-12",
+     "planDays": 7,
+     "factStart": "2026-01-12",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-05-04",
+     "planDays": 7,
+     "factStart": "2026-05-12",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-06-29",
+     "planDays": 14,
+     "factStart": "2026-07-06",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Кондрев Михаил Геннадиевич",
+   "position": "Руководитель отдела",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-02-28",
+     "planDays": 7,
+     "factStart": "2026-01-12",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-05-08",
+     "planDays": 7,
+     "factStart": "2026-05-07",
+     "factDays": 6,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-09-02",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 13,
+   "diff": 15
+  },
+  {
+   "fio": "Корчагин Олег Игоревич",
+   "position": "Инженер ПТО",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Куликов Александр Валентинович",
+   "position": "Слесарь-сантехник",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2025-07-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-11-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Проничев Сергей Евгеньевич",
+   "position": "Слесарь-сантехник",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-04-13",
+     "planDays": 14,
+     "factStart": "2026-02-24",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-11-09",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 4,
+   "diff": 24
+  },
+  {
+   "fio": "Шашлов Александр Иванович",
+   "position": "Слесарь-сантехник",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-09-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Соколовский Дмитрий Игоревич",
+   "position": "Электрогазосварщик",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": "перенос на авугст",
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-10-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Кнор Михаил Михайлович",
+   "position": "Разнорабочий",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-08-24",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-11-25",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Пириев Уланбек Айтмаматович",
+   "position": "Разнорабочий",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": "2026-05-25",
+     "factDays": 18,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 18,
+   "diff": 10
+  },
+  {
+   "fio": "Томилов Александр Иванович",
+   "position": "Разнорабочий",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-08-10",
+     "planDays": 14,
+     "factStart": "2026-07-06",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-10-15",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-12-01",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Хужакелдиев Хушвакт Жураевич",
+   "position": "Разнорабочий",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-04-15",
+     "planDays": 19,
+     "factStart": "2026-03-16",
+     "factDays": 19,
+     "factNote": null,
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-12-01",
+     "planDays": 9,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Стройотдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 19,
+   "diff": 9
+  },
+  {
+   "fio": "Парфенов Игорь Анатольевич",
+   "position": "Монтажник слаботочных систем",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-02-24",
+     "planDays": 4,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": "запрос  на перенос на конец лета или присоединение",
+     "dept": "Стройотдел"
+    },
+    {
+     "planStart": "2026-04-27",
+     "planDays": 4,
+     "factStart": "2026-04-27",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-10-13",
+     "planDays": 4,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-11-05",
+     "planDays": 2,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 4,
+   "diff": 24
+  },
+  {
+   "fio": "Торубаров Сергей Владимирович",
+   "position": "Монтажник слаботочных систем",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 16,
+     "factStart": "2026-06-15",
+     "factDays": 16,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-09-01",
+     "planDays": 12,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 16,
+   "diff": 12
+  },
+  {
+   "fio": "Коханов Александр Алексеевич",
+   "position": "Слесарь-ремонтник",
+   "legal": "Стройтехнологии",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел ремонтных работ"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Нестерчук Юлия Валерьевна",
+   "position": "Юрист",
+   "legal": "Континент",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 11,
+     "factStart": "2026-06-01",
+     "factDays": 11,
+     "factNote": null,
+     "dept": "Отдел ремонтных работ"
+    },
+    {
+     "planStart": "2026-08-18",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    },
+    {
+     "planStart": "2026-10-26",
+     "planDays": 3,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 11,
+   "diff": 17
+  },
+  {
+   "fio": "Денисов Андрей Александрович",
+   "position": "Инженер по слаботочным системам",
+   "legal": "Континент",
+   "periods": [
+    {
+     "planStart": "2026-05-12",
+     "planDays": 4,
+     "factStart": "2026-05-12",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    },
+    {
+     "planStart": "2026-06-08",
+     "planDays": 4,
+     "factStart": "2026-06-08",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-07-06",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-08-24",
+     "planDays": 6,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 8,
+   "diff": 20
+  },
+  {
+   "fio": "Некрасов Александр Викторович",
+   "position": "Водитель уборочной техники",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Отдел слаботочных систем"
+    },
+    {
+     "planStart": "2026-08-17",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Селенин Виталий Иванович",
+   "position": "Водитель уборочной техники",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-08-31",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Бацак Юрий Николаевич",
+   "position": "Уборщик территории",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-05-04",
+     "planDays": 14,
+     "factStart": "2026-05-27",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-09-14",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Жолдошбаев Жанибек Шамшиевич",
+   "position": "Уборщик территории",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-04-07",
+     "planDays": 28,
+     "factStart": "2026-03-30",
+     "factDays": 21,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 21,
+   "diff": 7
+  },
+  {
+   "fio": "Анкоси Светлана Николаевна",
+   "position": "Уборщик территории",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-08-17",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Ахмедова Сапия",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-07-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-09-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Вершкова Вера Николаевна",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-05-25",
+     "planDays": 14,
+     "factStart": "2026-05-25",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-07-13",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Олешкевич Светлана Васильевна",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-06-29",
+     "planDays": 14,
+     "factStart": "2026-07-06",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-09-14",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Тюрина Анна Ермолаевна",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-04-27",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 18,
+   "diff": 10
+  },
+  {
+   "fio": "Тихонова Галина Витальевна",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Юдина Нонна Николаевна",
+   "position": "Уборщица производственных помещений",
+   "legal": "СервисПлюс",
+   "periods": [
+    {
+     "planStart": "2026-04-20",
+     "planDays": 14,
+     "factStart": "2026-04-20",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Данюшкин Владислав Александрович",
+   "position": "Инженер технической поддержки",
+   "legal": "Система",
+   "periods": [
+    {
+     "planStart": "2026-03-16",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "АХО"
+    },
+    {
+     "planStart": "2026-08-17",
+     "planDays": 15,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    },
+    {
+     "planStart": "2026-09-25",
+     "planDays": 6,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Пимахов Антон Витальевич",
+   "position": "Инженер технической поддержки",
+   "legal": "Система",
+   "periods": [
+    {
+     "planStart": "2026-07-06",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    },
+    {
+     "planStart": "2026-08-15",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    },
+    {
+     "planStart": "2026-09-25",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 7,
+   "diff": 21
+  },
+  {
+   "fio": "Долгополова Наталья Васильевна",
+   "position": "Старший бухгалтер",
+   "legal": "Система",
+   "periods": [
+    {
+     "planStart": "2026-08-17",
+     "planDays": 11,
+     "factStart": "2026-03-12",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-09-14",
+     "planDays": 17,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Клюшник Юлия Викторовна",
+   "position": "бухгалтер",
+   "legal": "Система",
+   "periods": [
+    {
+     "planStart": "2026-04-20",
+     "planDays": 14,
+     "factStart": "2026-04-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-16",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Николина Елена Анатольевна",
+   "position": "Экономист",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-20",
+     "planDays": 5,
+     "factStart": "2026-02-05",
+     "factDays": 6,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-09-14",
+     "planDays": 9,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    },
+    {
+     "planStart": "2026-10-12",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 6,
+   "diff": 22
+  },
+  {
+   "fio": "Крамских Ирина Николаевна",
+   "position": "Ведущий специалист по персоналу",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 5,
+     "factStart": "2026-02-24",
+     "factDays": 6,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": "2026-06-29",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "HR"
+    },
+    {
+     "planStart": "2026-10-12",
+     "planDays": 9,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "HR"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 11,
+   "diff": 17
+  },
+  {
+   "fio": "Соловьева Ольга Викторовна",
+   "position": "Бухгалтер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-27",
+     "planDays": 4,
+     "factStart": "2026-04-27",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "HR"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 10,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 18,
+   "diff": 10
+  },
+  {
+   "fio": "Акобян Асатур Геворгович",
+   "position": "Инженер технической поддержки",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-03-10",
+     "planDays": 14,
+     "factStart": "2026-03-10",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    },
+    {
+     "planStart": "2026-10-01",
+     "planDays": 7,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 21,
+   "diff": 7
+  },
+  {
+   "fio": "Лощенко Андрей Николаевич",
+   "position": "Заместитель начальника контрольно-оперативной службы по контрольно-пропускному и внутриобъектовому режиму",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел информационных технологий"
+    },
+    {
+     "planStart": "2026-10-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Блинов Никита Сергеевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": "2026-03-10",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-09-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Вильчак Руслан Леонидович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-02-01",
+     "planDays": 14,
+     "factStart": "2026-02-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Галкин Владимир Александрович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-02-01",
+     "planDays": 14,
+     "factStart": "2026-02-02",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-11-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Давыдулин Вячеслав Михайлович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-15",
+     "planDays": 14,
+     "factStart": "2026-04-18",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Крамаренко Сергей Геннадьевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-08-01",
+     "planDays": 28,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Кузин Валерий Викторович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-02-15",
+     "planDays": 14,
+     "factStart": "2026-02-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Кузнецов Иван Владимирович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-01",
+     "planDays": 14,
+     "factStart": "2026-03-18",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Кузнецов Владимир Анатольевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-12-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Марков Юрий Юрьевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-11-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Нариманидзе Дмитрий Николаевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": "2026-03-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-10-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Удалов Анатолий Викторович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-07-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-12-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Червоный Никита Сергеевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-02-15",
+     "planDays": 14,
+     "factStart": "2026-02-16",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-16",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Чернов Сергей Васильевич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-01-15",
+     "planDays": 14,
+     "factStart": "2026-01-18",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Шанцев Евгений Викторович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": "2026-03-03",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Шахидов Руслан Ахметович",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-12-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Шергин Станислав Игоревич",
+   "position": "Контролер",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": "2026-02-14",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Уласевич Сергей Анатольевич",
+   "position": "Контролер-оператор",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-15",
+     "planDays": 14,
+     "factStart": "2026-04-16",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-10-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Фалевич Артём Евгеньевич",
+   "position": "Контролер-оператор",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-04-15",
+     "planDays": 14,
+     "factStart": "2026-04-08",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Лапиков Дмитрий Юрьевич",
+   "position": "Оперативный дежурный",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-03-01",
+     "planDays": 14,
+     "factStart": "2026-03-03",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Высоцкая Оксана Александровна",
+   "position": "Оператор по пропускам",
+   "legal": "Солнцево",
+   "periods": [
+    {
+     "planStart": "2026-06-29",
+     "planDays": 14,
+     "factStart": "2026-04-23",
+     "factDays": 11,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-17",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 11,
+   "diff": 17
+  },
+  {
+   "fio": "Шик Василий Васильевич",
+   "position": "Заместитель генерального директора",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-01",
+     "planDays": 28,
+     "factStart": "2026-06-02",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 4,
+   "diff": 24
+  },
+  {
+   "fio": "Дынко Ольга Анатольевна",
+   "position": "Операционный директор",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-06",
+     "planDays": 7,
+     "factStart": "2026-04-03",
+     "factDays": 1,
+     "factNote": null,
+     "dept": "Руководство"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 7,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Управление"
+    },
+    {
+     "planStart": "2026-07-06",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Управление"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 15,
+   "diff": 13
+  },
+  {
+   "fio": "Смолькин Сергей Александрович",
+   "position": "Технический директор",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-24",
+     "planDays": 9,
+     "factStart": "2026-02-26",
+     "factDays": 2,
+     "factNote": null,
+     "dept": "Управление"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": "2026-06-24",
+     "factDays": 9,
+     "factNote": null,
+     "dept": "Управление"
+    },
+    {
+     "planStart": "2026-10-26",
+     "planDays": 5,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Управление"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 11,
+   "diff": 17
+  },
+  {
+   "fio": "Семчук Роман Витальевич",
+   "position": "Главный специалист",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 7,
+     "factStart": "2026-06-15",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Управление"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел охраны труда"
+    },
+    {
+     "planStart": "2026-11-09",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел охраны труда"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 7,
+   "diff": 21
+  },
+  {
+   "fio": "Сиднева Ирина Анатольевна",
+   "position": "Руководитель отдела персонала",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-15",
+     "planDays": 14,
+     "factStart": "2026-06-10",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел охраны труда"
+    },
+    {
+     "planStart": "2026-11-16",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "HR"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 7,
+   "diff": 21
+  },
+  {
+   "fio": "Борисов Сергей Сергеевич",
+   "position": "Юрисконсульт",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": "2026-05-04",
+     "factDays": 6,
+     "factNote": null,
+     "dept": "HR"
+    },
+    {
+     "planStart": "2026-10-05",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 6,
+   "diff": 22
+  },
+  {
+   "fio": "Попов Владимир Александрович",
+   "position": "Ведущий инженер по эксплуатации производства",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": "2026-04-29",
+     "factDays": 2,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    },
+    {
+     "planStart": "2026-09-14",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Управление"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 2,
+   "diff": 26
+  },
+  {
+   "fio": "Смольянинов Сергей михайлович",
+   "position": "Начальник подъемно-транспортного участка и ремонта складской техники",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-02-24",
+     "planDays": 14,
+     "factStart": "2026-02-24",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Управление"
+    },
+    {
+     "planStart": "2026-08-11",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Леденева Светлана Ивановна",
+   "position": "Начальник экономического отдела",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-03-28",
+     "planDays": 7,
+     "factStart": "2026-04-02",
+     "factDays": 3,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    },
+    {
+     "planStart": "2026-10-26",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 3,
+   "diff": 25
+  },
+  {
+   "fio": "Голуб Инна Александровна",
+   "position": "Менеджер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-03-30",
+     "planDays": 7,
+     "factStart": "2026-03-30",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Финансовый отдел"
+    },
+    {
+     "planStart": "2026-06-01",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 13,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-08-24",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 20,
+   "diff": 8
+  },
+  {
+   "fio": "Глухарева Екатерина Николаевна",
+   "position": "Менеджер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-08-13",
+     "planDays": 9,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 5,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Солодникова Олеся Дмитриевна",
+   "position": "Менеджер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-27",
+     "planDays": 4,
+     "factStart": "2026-04-27",
+     "factDays": 9,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-12-21",
+     "planDays": 10,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 9,
+   "diff": 19
+  },
+  {
+   "fio": "Виноградова Ольга Викторовна",
+   "position": "Делопроизводитель",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-21",
+     "planDays": 4,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Коммерческий отдел"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 10,
+     "factStart": "2026-06-15",
+     "factDays": 12,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-10-21",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 12,
+   "diff": 16
+  },
+  {
+   "fio": "Волчкова Анастасия Сергеевна",
+   "position": "Специалист",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-24",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": "запрос  на перенос на конец лета или присоединение",
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-06-15",
+     "planDays": 7,
+     "factStart": "2026-06-08",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 7,
+   "diff": 21
+  },
+  {
+   "fio": "Корнеева Валерия Руслановна",
+   "position": "Ведущий специалист",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-03-16",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": "запрос на перенос на июль",
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-05-04",
+     "planDays": 5,
+     "factStart": "2026-05-02",
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-06-13",
+     "planDays": 9,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 7,
+   "diff": 21
+  },
+  {
+   "fio": "Костерова Татьяна Анатольевна",
+   "position": "Главный бухгалтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-01",
+     "planDays": 14,
+     "factStart": "2026-03-30",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-08-04",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Муштаева Анна Александровна",
+   "position": "Бухгалтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-13",
+     "planDays": 7,
+     "factStart": "2026-03-27",
+     "factDays": 6,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": "2026-06-08",
+     "factDays": 4,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-10-26",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 10,
+   "diff": 18
+  },
+  {
+   "fio": "Старовойтов Николай Александрович",
+   "position": "Заведующий складом",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-04",
+     "planDays": 5,
+     "factStart": "2026-05-04",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "Бухгалтерия"
+    },
+    {
+     "planStart": "2026-06-08",
+     "planDays": 4,
+     "factStart": "2026-06-15",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-07-06",
+     "planDays": 14,
+     "factStart": "2026-07-06",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-11-02",
+     "planDays": 5,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 24,
+   "diff": 4
+  },
+  {
+   "fio": "Дронкин Дмитрий Витальевич",
+   "position": "Заместитель заведующего складом",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-02-24",
+     "planDays": 4,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-03-02",
+     "planDays": 5,
+     "factStart": "2026-03-02",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-10-26",
+     "planDays": 5,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 5,
+   "diff": 23
+  },
+  {
+   "fio": "Мотякин Артем Игоревич",
+   "position": "Кладовщик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-18",
+     "planDays": 14,
+     "factStart": "2026-04-13",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 5,
+   "diff": 23
+  },
+  {
+   "fio": "Герасимов Владимир Викторович",
+   "position": "Начальник",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-04",
+     "planDays": 5,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Склад административно-хозяйственного и материально-технического обеспечения"
+    },
+    {
+     "planStart": "2026-07-27",
+     "planDays": 5,
+     "factStart": "2026-07-06",
+     "factDays": 5,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-11-10",
+     "planDays": 4,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 5,
+   "diff": 23
+  },
+  {
+   "fio": "Фартальнов Александр Евгеньевич",
+   "position": "Заместитель начальника КОС",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-13",
+     "planDays": 14,
+     "factStart": "2026-04-09",
+     "factDays": 10,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-10",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 7,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 17,
+   "diff": 11
+  },
+  {
+   "fio": "Макарова наталья Константиновна",
+   "position": "Кассир-контролер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-02-19",
+     "planDays": 7,
+     "factStart": "2026-02-10",
+     "factDays": 12,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-07-25",
+     "planDays": 16,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 23,
+   "factTotal": 12,
+   "diff": 11
+  },
+  {
+   "fio": "Овсянникова Олеся Александровна",
+   "position": "Кассир-контролер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-14",
+     "planDays": 14,
+     "factStart": "2026-06-12",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-10-24",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Корноухов дмитрий Владимирович",
+   "position": "Инженер-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Контрольно-оперативная служба"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Коршунов Алексей Павлович",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-07-16",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-08-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Савченков Вячеслав Николаевич",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-15",
+     "planDays": 14,
+     "factStart": "2026-04-15",
+     "factDays": 16,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": "2026-07-20",
+     "factDays": 12,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Сенькин Дмитрий Геннадьевич",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-17",
+     "planDays": 14,
+     "factStart": "2026-06-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-07-16",
+     "planDays": 14,
+     "factStart": "2026-07-13",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Соболев Максим Александрович",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-08",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Полищук Дмитрий Анатольевич",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-15",
+     "planDays": 14,
+     "factStart": "2026-06-15",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-11-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Стрекалов Данила Витальевич",
+   "position": "Слесарь-электрик",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-08-24",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-10-12",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Биккулов Сергей Абдуллович",
+   "position": "Слесарь-ремонтник",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-13",
+     "planDays": 14,
+     "factStart": "2026-07-13",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Гусаров Сергей Викторович",
+   "position": "Слесарь КИПиА",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-12",
+     "planDays": 14,
+     "factStart": "2026-05-12",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Дроздов Вячеслав Михайлович",
+   "position": "Техник по ремонту и обслуживанию промышленного оборудования",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-29",
+     "planDays": 14,
+     "factStart": "2026-06-09",
+     "factDays": 3,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-08-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 3,
+   "diff": 25
+  },
+  {
+   "fio": "Арутюнян Марина Юрьевна",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Служба главного энергетика"
+    },
+    {
+     "planStart": "2026-09-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Вихорев Николай Адольфович",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-20",
+     "planDays": 14,
+     "factStart": "2026-04-20",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-07-06",
+     "planDays": 14,
+     "factStart": "2026-07-06",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Власов Валентин Семенович",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-11",
+     "planDays": 14,
+     "factStart": "2026-05-12",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-08-17",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Володин Виктор Анатольевич",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-08",
+     "planDays": 14,
+     "factStart": "2026-06-08",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-09-21",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Голиков Виталий Иванович",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-06",
+     "planDays": 14,
+     "factStart": "2026-04-06",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-08-03",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Жарова Ирина Викторовна",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-20",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-10-05",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Зуева Наталья Владимировна",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-05-25",
+     "planDays": 14,
+     "factStart": "2026-05-25",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-10-19",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Маракаткина Елена Владимировна",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-22",
+     "planDays": 14,
+     "factStart": "2026-06-22",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-09-07",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Матвеев Владимир Алексеевич",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-01",
+     "planDays": 14,
+     "factStart": "2026-04-09",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-08-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Миронов Валентин Николаевич",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-02-01",
+     "planDays": 14,
+     "factStart": "2026-02-07",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-09-15",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Шурыгина Светлана Николаевна",
+   "position": "Лифтер",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 14,
+     "factStart": "2026-06-17",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-10-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Карпунин Виктор Фаллалеевич",
+   "position": "Специалист по организации технического обслуживания и ремонта лифтов",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-01",
+     "planDays": 28,
+     "factStart": "2026-06-03",
+     "factDays": 28,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 28,
+   "diff": 0
+  },
+  {
+   "fio": "Одарченко Валентин Юрьевич",
+   "position": "Электромеханик по лифтам",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-07-13",
+     "planDays": 28,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  },
+  {
+   "fio": "Сабанаев Денис Юрьевич",
+   "position": "Электромеханик по лифтам",
+   "legal": "Торнадо",
+   "periods": [
+    {
+     "planStart": "2026-04-06",
+     "planDays": 14,
+     "factStart": "2026-04-01",
+     "factDays": 14,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-08-10",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 14,
+   "diff": 14
+  },
+  {
+   "fio": "Гузенко Федор Владимирович",
+   "position": "Старший группы юристов",
+   "legal": "Коллегия",
+   "periods": [
+    {
+     "planStart": "2026-04-01",
+     "planDays": 14,
+     "factStart": "2026-04-09",
+     "factDays": 10,
+     "factNote": null,
+     "dept": "Подъемно-транспортный участок"
+    },
+    {
+     "planStart": "2026-09-01",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 10,
+   "diff": 18
+  },
+  {
+   "fio": "Радчик Мария Александровна",
+   "position": "Курьер",
+   "legal": "Коллегия",
+   "periods": [
+    {
+     "planStart": "2026-06-15",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Юридический отдел"
+    },
+    {
+     "planStart": "2026-07-20",
+     "planDays": 7,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    },
+    {
+     "planStart": "2026-11-05",
+     "planDays": 14,
+     "factStart": null,
+     "factDays": 0,
+     "factNote": null,
+     "dept": "Отдел поддержки бизнес процессов"
+    }
+   ],
+   "planTotal": 28,
+   "factTotal": 0,
+   "diff": 28
+  }
+ ],
+ "legalEntities": [
+  "Каплий",
+  "Коллегия",
+  "Континент",
+  "СервисПлюс",
+  "Система",
+  "Солнцево",
+  "Стройтехнологии",
+  "Торнадо"
+ ]
+}
+</script>
+
+<script>
+(function(){
+  'use strict';
+
+  // ===== Constants =====
+  var MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  var MONTH_DAYS_2026 = [31,28,31,30,31,30,31,31,30,31,30,31];
+  var QUARTERS = [
+    {label:'I кв', months:[0,1,2], color:'#3B82F6'},
+    {label:'II кв', months:[3,4,5], color:'#14B8A6'},
+    {label:'III кв', months:[6,7,8], color:'#F59E0B'},
+    {label:'IV кв', months:[9,10,11], color:'#E11D6F'}
+  ];
+  var YEAR = 2026;
+
+  var raw = JSON.parse(document.getElementById('vacation-data').textContent);
+  var EMPLOYEES = [];
+  var LEGAL_ENTITIES = [];
+  var DATA_SOURCE_LABEL = 'встроенные данные';
+
+  // ===== State =====
+  var state = {
+    legalFilter: 'Все',
+    searchText: '',
+    selectedIds: new Set(),
+    showPlan: true,
+    showFact: true,
+    sortDir: 'asc' // 'asc' = A->Я, 'desc' = Я->A
+  };
+
+  function surnameOf(fio){
+    return fio.split(' ')[0];
+  }
+
+  function buildSegments(emp){
+    var planSegs = [];
+    var factSegs = [];
+    emp.periods.forEach(function(p, idx){
+      if(p.planStart && p.planDays > 0){
+        var ps = dateFromISO(p.planStart);
+        var pStartDay = dayOfYear(ps);
+        var pEndDay = pStartDay + p.planDays - 1; // inclusive
+        planSegs.push({startDay: pStartDay, endDay: pEndDay, periodIdx: idx});
+      }
+      if(p.factStart && p.factDays > 0){
+        var fs = dateFromISO(p.factStart);
+        var fStartDay = dayOfYear(fs);
+        var fEndDay = fStartDay + p.factDays - 1;
+        factSegs.push({startDay: fStartDay, endDay: fEndDay, periodIdx: idx});
+      }
+    });
+    return {planSegs: planSegs, factSegs: factSegs};
+  }
+
+  // Loads a new dataset (from the embedded JSON, or from a freshly parsed Excel file)
+  // and resets any selection state that referenced the old employee ids.
+  function loadDataset(employees, legalEntities, sourceLabel){
+    EMPLOYEES = employees;
+    LEGAL_ENTITIES = legalEntities;
+    DATA_SOURCE_LABEL = sourceLabel || DATA_SOURCE_LABEL;
+
+    EMPLOYEES.forEach(function(e, i){
+      e.id = 'emp_' + i;
+      var segs = buildSegments(e);
+      e._planSegs = segs.planSegs;
+      e._factSegs = segs.factSegs;
+    });
+
+    // selections/filters from the previous dataset no longer make sense
+    state.selectedIds = new Set();
+    state.legalFilter = 'Все';
+    state.searchText = '';
+  }
+
+  // ===== Date helpers =====
+  function dateFromISO(iso){
+    if(!iso) return null;
+    var parts = iso.split('-');
+    return new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+  }
+  function dayOfYear(d){
+    var start = new Date(d.getFullYear(),0,1);
+    return Math.floor((d - start) / 86400000); // 0-indexed
+  }
+  function addDays(d, n){
+    var nd = new Date(d.getTime());
+    nd.setDate(nd.getDate()+n);
+    return nd;
+  }
+
+  // total days in year for layout
+  var TOTAL_DAYS = MONTH_DAYS_2026.reduce(function(a,b){return a+b;},0);
+
+  // Precompute month start offsets (day-of-year, 0-indexed)
+  var MONTH_START_OFFSET = [];
+  (function(){
+    var acc = 0;
+    for(var i=0;i<12;i++){ MONTH_START_OFFSET.push(acc); acc += MONTH_DAYS_2026[i]; }
+  })();
+
+  // ===== Filtering =====
+  function normalize(s){
+    return (s || '').toLowerCase().replace(/ё/g,'е');
+  }
+
+  function getFilteredEmployees(){
+    var list = EMPLOYEES.slice();
+
+    if(state.selectedIds.size > 0){
+      list = list.filter(function(e){ return state.selectedIds.has(e.id); });
+    } else {
+      if(state.legalFilter !== 'Все'){
+        list = list.filter(function(e){ return e.legal === state.legalFilter; });
+      }
+      if(state.searchText.trim()){
+        var q = normalize(state.searchText.trim());
+        list = list.filter(function(e){ return normalize(e.fio).indexOf(q) !== -1; });
+      }
+    }
+    return list;
+  }
+
+  function surnameOf(fio){
+    return fio.split(' ')[0];
+  }
+
+  function sortEmployees(list){
+    list.sort(function(a,b){
+      var sa = surnameOf(a.fio), sb = surnameOf(b.fio);
+      var cmp = sa.localeCompare(sb, 'ru');
+      return state.sortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }
+
+  function groupByLegal(list){
+    var groups = {};
+    var order = [];
+    list.forEach(function(e){
+      if(!groups[e.legal]){ groups[e.legal] = []; order.push(e.legal); }
+      groups[e.legal].push(e);
+    });
+    // keep legal groups in LEGAL_ENTITIES order where possible
+    order.sort(function(a,b){
+      var ia = LEGAL_ENTITIES.indexOf(a), ib = LEGAL_ENTITIES.indexOf(b);
+      if(ia === -1) ia = 999; if(ib === -1) ib = 999;
+      return ia - ib;
+    });
+    return {groups: groups, order: order};
+  }
+
+  // ===== Rendering =====
+  var appEl = document.getElementById('app');
+
+  function el(tag, props, children){
+    var e = document.createElement(tag);
+    if(props){
+      Object.keys(props).forEach(function(k){
+        if(k === 'class') e.className = props[k];
+        else if(k === 'html') e.innerHTML = props[k];
+        else if(k.indexOf('on') === 0 && typeof props[k] === 'function'){
+          e.addEventListener(k.slice(2).toLowerCase(), props[k]);
+        } else {
+          e.setAttribute(k, props[k]);
+        }
+      });
+    }
+    if(children){
+      (Array.isArray(children) ? children : [children]).forEach(function(c){
+        if(c == null) return;
+        if(typeof c === 'string') e.appendChild(document.createTextNode(c));
+        else e.appendChild(c);
+      });
+    }
+    return e;
+  }
+
+  function buildHeader(){
+    var wrap = el('div', {class:'top-sticky'});
+
+    var ph = el('div', {class:'page-header'}, [
+      el('h1', {}, [el('span',{class:'icon'},'📊'), 'Диаграмма Ганта — План отпусков 2026']),
+      el('p', {}, 'Сводный график отпусков по всем юридическим лицам')
+    ]);
+    wrap.appendChild(ph);
+
+    // Filters row
+    var filtersBar = el('div', {class:'filters-bar'});
+
+    // 1. legal select
+    var legalGroup = el('div', {class:'filter-group'});
+    legalGroup.appendChild(el('label', {}, 'Фильтр по юрлицу:'));
+    var legalSelect = el('select', {class:'f-select', id:'legalSelect'});
+    ['Все'].concat(LEGAL_ENTITIES).forEach(function(le){
+      var opt = el('option', {value: le}, le);
+      if(le === state.legalFilter) opt.selected = true;
+      legalSelect.appendChild(opt);
+    });
+    legalSelect.addEventListener('change', function(){
+      state.legalFilter = this.value;
+      render();
+    });
+    legalGroup.appendChild(legalSelect);
+    filtersBar.appendChild(legalGroup);
+
+    // 2. search
+    var searchGroup = el('div', {class:'filter-group'});
+    searchGroup.appendChild(el('label', {}, 'Поиск сотрудника:'));
+    var searchInput = el('input', {class:'f-search', type:'text', placeholder:'Введите фамилию для поиска', value: state.searchText});
+    searchInput.addEventListener('input', function(){
+      state.searchText = this.value;
+      render();
+    });
+    searchGroup.appendChild(searchInput);
+    searchGroup.appendChild(el('div', {class:'search-hint'}, '(фамилия, имя, отчество)'));
+    filtersBar.appendChild(searchGroup);
+
+    // 3. multiselect
+    var msWrap = el('div', {class:'multiselect-wrap'});
+    var msLabelRow = el('div', {style:'display:flex;align-items:center;justify-content:space-between;gap:8px;'});
+    msLabelRow.appendChild(el('label', {}, 'Выберите сотрудников:'));
+    var msToolbar = el('div', {class:'ms-toolbar'});
+    var allBtn = el('button', {type:'button'}, '✓ Все');
+    var noneBtn = el('button', {type:'button', class:'secondary'}, 'Сбросить');
+    msToolbar.appendChild(allBtn);
+    msToolbar.appendChild(noneBtn);
+    msLabelRow.appendChild(msToolbar);
+    msWrap.appendChild(msLabelRow);
+
+    var msBox = el('div', {class:'multiselect-box', id:'msBox'});
+
+    // candidate pool respects current legal filter + search, like the dataset the person is actively narrowing
+    var poolBase = EMPLOYEES.slice();
+    if(state.legalFilter !== 'Все'){
+      poolBase = poolBase.filter(function(e){ return e.legal === state.legalFilter; });
+    }
+    if(state.searchText.trim()){
+      var q0 = normalize(state.searchText.trim());
+      poolBase = poolBase.filter(function(e){ return normalize(e.fio).indexOf(q0) !== -1; });
+    }
+    var allEmpsSorted = poolBase.sort(function(a,b){
+      return surnameOf(a.fio).localeCompare(surnameOf(b.fio), 'ru');
+    });
+
+    allBtn.addEventListener('click', function(){
+      allEmpsSorted.forEach(function(emp){ state.selectedIds.add(emp.id); });
+      render();
+    });
+    noneBtn.addEventListener('click', function(){
+      state.selectedIds.clear();
+      render();
+    });
+
+    allEmpsSorted.forEach(function(emp){
+      var checked = state.selectedIds.has(emp.id);
+      var optRow = el('label', {class:'ms-option'});
+      var cb = el('input', {type:'checkbox'});
+      cb.checked = checked;
+      cb.addEventListener('change', function(){
+        if(cb.checked) state.selectedIds.add(emp.id);
+        else state.selectedIds.delete(emp.id);
+        render();
+      });
+      optRow.appendChild(cb);
+      optRow.appendChild(el('span', {class:'name'}, emp.fio + ' (' + emp.legal + ' - ' + emp.position + ')'));
+      msBox.appendChild(optRow);
+    });
+    if(allEmpsSorted.length === 0){
+      msBox.appendChild(el('div', {style:'padding:10px;font-size:12.5px;color:var(--text-muted);'}, 'Никого не найдено'));
+    }
+    msWrap.appendChild(msBox);
+    filtersBar.appendChild(msWrap);
+
+    wrap.appendChild(filtersBar);
+
+    // Actions bar
+    var actionsBar = el('div', {class:'actions-bar'});
+
+    var clearBtn = el('button', {class:'btn btn-clear'}, ['✕ Очистить']);
+    clearBtn.addEventListener('click', function(){
+      state.legalFilter = 'Все';
+      state.searchText = '';
+      state.selectedIds = new Set();
+      render();
+    });
+    actionsBar.appendChild(clearBtn);
+
+    // plan checkbox
+    var planLabel = el('label', {class:'checkbox-pill'});
+    var planCb = el('input', {type:'checkbox'});
+    planCb.checked = state.showPlan;
+    planCb.addEventListener('change', function(){ state.showPlan = planCb.checked; render(); });
+    planLabel.appendChild(planCb);
+    planLabel.appendChild(el('span', {class:'dot dot-plan'}));
+    planLabel.appendChild(el('span', {}, 'Плановый'));
+    actionsBar.appendChild(planLabel);
+
+    // fact checkbox
+    var factLabel = el('label', {class:'checkbox-pill'});
+    var factCb = el('input', {type:'checkbox'});
+    factCb.checked = state.showFact;
+    factCb.addEventListener('change', function(){ state.showFact = factCb.checked; render(); });
+    factLabel.appendChild(factCb);
+    factLabel.appendChild(el('span', {class:'dot dot-fact'}));
+    factLabel.appendChild(el('span', {}, 'Фактический'));
+    actionsBar.appendChild(factLabel);
+
+    // export button
+    var exportBtn = el('button', {class:'btn btn-export'}, ['⬇ Скачать Excel']);
+    exportBtn.addEventListener('click', function(){
+      exportBtn.disabled = true;
+      var originalText = exportBtn.textContent;
+      exportBtn.textContent = '⏳ Формирование...';
+      exportToExcel().catch(function(err){
+        alert('Не удалось сформировать файл: ' + err.message);
+      }).finally(function(){
+        exportBtn.disabled = false;
+        exportBtn.textContent = originalText;
+      });
+    });
+    actionsBar.appendChild(exportBtn);
+
+    // import button (upload a fresh Excel to replace the dataset)
+    var fileInput = el('input', {type:'file', accept:'.xlsx,.xls', style:'display:none;'});
+    fileInput.addEventListener('change', function(){
+      if(fileInput.files && fileInput.files[0]){
+        handleExcelFile(fileInput.files[0]);
+      }
+      fileInput.value = '';
+    });
+    var importBtn = el('button', {class:'btn btn-import'}, ['📤 Загрузить Excel']);
+    importBtn.addEventListener('click', function(){ fileInput.click(); });
+    actionsBar.appendChild(importBtn);
+    actionsBar.appendChild(fileInput);
+
+    // selected counter
+    actionsBar.appendChild(el('div', {class:'selected-counter', id:'selCounter'}, 'Выбрано: ' + state.selectedIds.size));
+
+    // data source indicator
+    actionsBar.appendChild(el('div', {class:'data-source-pill', title:'Источник текущих данных'}, [
+      el('span', {class:'dsp-dot'}),
+      'Данные: ' + DATA_SOURCE_LABEL
+    ]));
+
+    // sort group
+    var sortGroup = el('div', {class:'sort-group'});
+    sortGroup.appendChild(el('label', {}, 'Сортировка по фамилии:'));
+    var ascBtn = el('button', {class:'sort-btn' + (state.sortDir==='asc' ? ' active' : '')}, 'А → Я');
+    ascBtn.addEventListener('click', function(){ state.sortDir = 'asc'; render(); });
+    var descBtn = el('button', {class:'sort-btn' + (state.sortDir==='desc' ? ' active' : '')}, 'Я → А');
+    descBtn.addEventListener('click', function(){ state.sortDir = 'desc'; render(); });
+    sortGroup.appendChild(ascBtn);
+    sortGroup.appendChild(descBtn);
+    actionsBar.appendChild(sortGroup);
+
+    wrap.appendChild(actionsBar);
+
+    // Legend
+    var legendBar = el('div', {class:'legend-bar'});
+    legendBar.appendChild(el('div', {class:'legend-item'}, [el('span',{class:'legend-swatch', style:'background:'+'#3B82F6'}), 'Плановый отпуск']));
+    legendBar.appendChild(el('div', {class:'legend-item'}, [el('span',{class:'legend-swatch', style:'background:#65A30D'}), 'Фактический отпуск']));
+    legendBar.appendChild(el('div', {class:'legend-item'}, [el('span',{class:'legend-swatch empty', style:'background:#ECECEC'}), 'Нет отпуска']));
+    legendBar.appendChild(el('div', {class:'legend-divider'}));
+
+    var qWrap = el('div', {class:'quarter-legend'});
+    qWrap.appendChild(el('span', {class:'ql-label'}, 'Кварталы:'));
+    QUARTERS.forEach(function(q){
+      qWrap.appendChild(el('div', {class:'q-chip'}, [
+        el('span', {class:'q-swatch', style:'background:'+q.color}),
+        q.label
+      ]));
+    });
+    legendBar.appendChild(qWrap);
+    wrap.appendChild(legendBar);
+
+    return wrap;
+  }
+
+  function buildTableHeader(){
+    var thead = el('thead');
+
+    var monthRow = el('tr', {class:'month-row'});
+    monthRow.appendChild(el('th', {class:'col-legal', rowspan:'2'}, 'Юрлицо'));
+    monthRow.appendChild(el('th', {class:'col-name', rowspan:'2'}, 'Сотрудник (Должность)'));
+    monthRow.appendChild(el('th', {class:'col-plan', rowspan:'2'}, 'План'));
+    monthRow.appendChild(el('th', {class:'col-fact', rowspan:'2'}, 'Факт'));
+    monthRow.appendChild(el('th', {class:'col-diff', rowspan:'2'}, 'Разница'));
+    MONTHS.forEach(function(m, idx){
+      monthRow.appendChild(el('th', {class:'month-cell'}, m));
+    });
+    thead.appendChild(monthRow);
+
+    var quarterRow = el('tr', {class:'quarter-row'});
+    QUARTERS.forEach(function(q){
+      q.months.forEach(function(){
+        quarterRow.appendChild(el('th', {class:'month-cell', style:'background:'+q.color}, q.label));
+      });
+    });
+    thead.appendChild(quarterRow);
+
+    return thead;
+  }
+
+  function renderGanttCell(emp, monthIdx){
+    var cell = el('td', {class:'gantt-cell'});
+    var track = el('div', {class:'month-track'});
+    var daysInMonth = MONTH_DAYS_2026[monthIdx];
+    var monthStartDay = MONTH_START_OFFSET[monthIdx];
+    var monthEndDay = monthStartDay + daysInMonth - 1;
+
+    function addBarsFor(segs, cls){
+      segs.forEach(function(seg){
+        var segStart = Math.max(seg.startDay, monthStartDay);
+        var segEnd = Math.min(seg.endDay, monthEndDay);
+        if(segStart > segEnd) return; // no overlap with this month
+        var leftDayInMonth = segStart - monthStartDay;
+        var widthDays = segEnd - segStart + 1;
+        var leftPct = (leftDayInMonth / daysInMonth) * 100;
+        var widthPct = (widthDays / daysInMonth) * 100;
+        var bar = el('div', {
+          class: 'bar ' + cls,
+          style: 'left:' + leftPct + '%; width:' + widthPct + '%;'
+        });
+        track.appendChild(bar);
+      });
+    }
+
+    if(state.showPlan){
+      addBarsFor(emp._planSegs, 'plan');
+    }
+    if(state.showFact){
+      // fact drawn after plan -> sits on top, satisfies priority rule for overlaps
+      addBarsFor(emp._factSegs, 'fact');
+    }
+
+    cell.appendChild(track);
+    return cell;
+  }
+
+  function buildEmployeeRow(emp){
+    var tr = el('tr', {class:'data-row'});
+    tr.appendChild(el('td', {class:'col-legal'}, emp.legal));
+
+    var nameCell = el('td', {class:'col-name'});
+    nameCell.appendChild(el('div', {class:'fio', title: emp.fio}, emp.fio));
+    nameCell.appendChild(el('div', {class:'pos', title: emp.position}, emp.position));
+    tr.appendChild(nameCell);
+
+    tr.appendChild(el('td', {class:'col-plan'}, String(emp.planTotal || 0)));
+    tr.appendChild(el('td', {class:'col-fact'}, emp.factTotal ? String(emp.factTotal) : el('span',{class:'dash'},'-')));
+
+    var diffCell = el('td', {class:'col-diff'});
+    var diffVal = emp.diff || 0;
+    if(diffVal < 0) diffVal = 0;
+    var pill = el('span', {class:'diff-pill' + (diffVal === 0 ? ' zero' : '')}, String(diffVal));
+    diffCell.appendChild(pill);
+    tr.appendChild(diffCell);
+
+    for(var m=0;m<12;m++){
+      tr.appendChild(renderGanttCell(emp, m));
+    }
+    return tr;
+  }
+
+  function buildGroupRow(legalName, count){
+    var tr = el('tr', {class:'group-row'});
+    var td = el('td', {class:'group-sticky-cell', colspan: String(17)}, legalName + ' (' + count + ' чел.)');
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function buildTable(){
+    var outer = el('div', {class:'table-scroll-outer'});
+    var table = el('table', {class:'gantt-table'});
+    table.appendChild(buildTableHeader());
+
+    var tbody = el('tbody');
+
+    if(!state.showPlan && !state.showFact){
+      outer.appendChild(table);
+      var emptyMsg = el('div', {class:'empty-state'}, 'Диаграмма пустая — включите отображение плановых или фактических отпусков.');
+      outer.appendChild(emptyMsg);
+      return outer;
+    }
+
+    var filtered = getFilteredEmployees();
+    sortEmployees(filtered);
+
+    if(filtered.length === 0){
+      outer.appendChild(table);
+      outer.appendChild(el('div', {class:'empty-state'}, 'Сотрудники не найдены. Попробуйте изменить фильтры или поиск.'));
+      return outer;
+    }
+
+    var grouped = groupByLegal(filtered);
+    grouped.order.forEach(function(legalName){
+      var list = grouped.groups[legalName];
+      tbody.appendChild(buildGroupRow(legalName, list.length));
+      list.forEach(function(emp){
+        tbody.appendChild(buildEmployeeRow(emp));
+      });
+    });
+
+    table.appendChild(tbody);
+    outer.appendChild(table);
+    return outer;
+  }
+
+  function render(){
+    appEl.innerHTML = '';
+    appEl.appendChild(buildHeader());
+    appEl.appendChild(buildTable());
+  }
+
+  // ===== Excel export =====
+  // Determines which calendar months (0-11) a list of {startDay,endDay} segments touches.
+  function monthsTouchedBySegs(segs){
+    var months = new Set();
+    segs.forEach(function(seg){
+      for(var m = 0; m < 12; m++){
+        var monthStart = MONTH_START_OFFSET[m];
+        var monthEnd = monthStart + MONTH_DAYS_2026[m] - 1;
+        if(seg.startDay <= monthEnd && seg.endDay >= monthStart){
+          months.add(m);
+        }
+      }
+    });
+    return months;
+  }
+
+  var EXPORT_COLORS = {
+    plan: 'FF3B82F6',
+    fact: 'FF65A30D',
+    empty: 'FFECECEC'
+  };
+
+  async function exportToExcel(){
+    var filtered = getFilteredEmployees();
+    sortEmployees(filtered);
+
+    var workbook = new ExcelJS.Workbook();
+    var sheet = workbook.addWorksheet('Отпуска ' + YEAR);
+
+    var headerRow = ['Юрлицо','Сотрудник','Должность','План','Факт','Разница'].concat(MONTHS);
+    sheet.addRow(headerRow);
+    var hRow = sheet.getRow(1);
+    hRow.font = {bold:true, color:{argb:'FFFFFFFF'}};
+    hRow.eachCell(function(cell){
+      cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF1E3A5F'}};
+      cell.alignment = {horizontal:'center', vertical:'middle'};
+    });
+
+    filtered.forEach(function(emp){
+      var diffVal = (emp.diff || 0) < 0 ? 0 : (emp.diff || 0);
+      var rowValues = [
+        emp.legal,
+        emp.fio,
+        emp.position,
+        emp.planTotal || 0,
+        emp.factTotal || 0,
+        diffVal
+      ];
+      // 12 empty month placeholders - colored via fill, not text
+      for(var m=0;m<12;m++){ rowValues.push(null); }
+
+      var row = sheet.addRow(rowValues);
+
+      var planMonths = state.showPlan ? monthsTouchedBySegs(emp._planSegs) : new Set();
+      var factMonths = state.showFact ? monthsTouchedBySegs(emp._factSegs) : new Set();
+
+      for(var mi=0; mi<12; mi++){
+        var colIdx = 7 + mi; // 1-based: A=1..F=6 fixed cols, G=7 is Jan
+        var cell = row.getCell(colIdx);
+        var argb;
+        if(factMonths.has(mi)){
+          argb = EXPORT_COLORS.fact; // fact has priority over plan, same rule as on-screen
+        } else if(planMonths.has(mi)){
+          argb = EXPORT_COLORS.plan;
+        } else {
+          argb = EXPORT_COLORS.empty;
+        }
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: argb}};
+      }
+    });
+
+    // column widths
+    sheet.getColumn(1).width = 16; // Юрлицо
+    sheet.getColumn(2).width = 30; // Сотрудник
+    sheet.getColumn(3).width = 28; // Должность
+    sheet.getColumn(4).width = 8;  // План
+    sheet.getColumn(5).width = 8;  // Факт
+    sheet.getColumn(6).width = 9;  // Разница
+    for(var c=0;c<12;c++){ sheet.getColumn(7+c).width = 6; }
+
+    sheet.views = [{state:'frozen', xSplit:6, ySplit:1}];
+
+    var buffer = await workbook.xlsx.writeBuffer();
+    var blob = new Blob([buffer], {type:'application/octet-stream'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'План_отпусков_выгрузка.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ===== Excel import (parses a workbook in the same layout as the source file) =====
+  // Expected columns (by header name, order-independent):
+  // Структурное подразделение | Должность | Фамилия Имя Отчество | Количество дней Отпуска |
+  // Дата Запланированная | Месяц отпуска | Юрлицо | Фактические даты | Кол-во дней
+  var EXPECTED_HEADERS = {
+    dept: 'структурное подразделение',
+    position: 'должность',
+    fio: 'фамилия имя отчество',
+    planDays: 'количество дней отпуска',
+    planDate: 'дата запланированная',
+    legal: 'юрлицо',
+    factDate: 'фактические даты',
+    factDays: 'кол-во дней'
+  };
+
+  function excelSerialToDate(serial){
+    // Excel's epoch (1900 date system), matches SheetJS's own conversion for numeric dates
+    var utcDays = Math.floor(serial - 25569);
+    var utcMs = utcDays * 86400000;
+    var d = new Date(utcMs);
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+
+  function toDateOrNull(val){
+    if(val == null || val === '') return null;
+    if(val instanceof Date) return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+    if(typeof val === 'number') return excelSerialToDate(val);
+    if(typeof val === 'string'){
+      var m = val.match(/(\d{1,2})\.(\d{1,2})\.?(\d{2,4})?/);
+      if(!m) return null;
+      var d = parseInt(m[1],10), mo = parseInt(m[2],10), y = m[3] ? m[3] : '2026';
+      if(y.length === 2) y = '20' + y;
+      var dt = new Date(parseInt(y,10), mo - 1, d);
+      if(isNaN(dt.getTime())) return null;
+      return dt;
+    }
+    return null;
+  }
+
+  function toISO(d){
+    if(!d) return null;
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var dd = String(d.getDate()).padStart(2,'0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  function findHeaderRow(rows){
+    for(var r = 0; r < Math.min(rows.length, 10); r++){
+      var rowVals = (rows[r] || []).map(function(v){ return (v || '').toString().trim().toLowerCase(); });
+      var hits = 0;
+      Object.keys(EXPECTED_HEADERS).forEach(function(key){
+        if(rowVals.indexOf(EXPECTED_HEADERS[key]) !== -1) hits++;
+      });
+      if(hits >= 5) return r; // good enough match to treat this as the header row
+    }
+    return -1;
+  }
+
+  function parseWorkbookToEmployees(workbook){
+    var sheetName = workbook.SheetNames[0];
+    var sheet = workbook.Sheets[sheetName];
+    var rows = XLSX.utils.sheet_to_json(sheet, {header: 1, raw: true, defval: null});
+
+    var headerRowIdx = findHeaderRow(rows);
+    if(headerRowIdx === -1){
+      throw new Error('Не удалось найти строку заголовков в файле. Проверьте, что колонки названы как в исходном шаблоне.');
+    }
+
+    var headerRow = rows[headerRowIdx].map(function(v){ return (v || '').toString().trim().toLowerCase(); });
+    var colIdx = {};
+    Object.keys(EXPECTED_HEADERS).forEach(function(key){
+      colIdx[key] = headerRow.indexOf(EXPECTED_HEADERS[key]);
+    });
+    if(colIdx.fio === -1){
+      throw new Error('В файле не найдена колонка "Фамилия Имя Отчество".');
+    }
+
+    var employeesByFio = {};
+    var order = [];
+
+    for(var r = headerRowIdx + 1; r < rows.length; r++){
+      var row = rows[r];
+      if(!row) continue;
+      var fioRaw = colIdx.fio !== -1 ? row[colIdx.fio] : null;
+      if(fioRaw == null || String(fioRaw).trim() === '') continue;
+      var fio = String(fioRaw).trim();
+
+      var dept = colIdx.dept !== -1 ? (row[colIdx.dept] || '') : '';
+      var position = colIdx.position !== -1 ? (row[colIdx.position] || '') : '';
+      var legal = colIdx.legal !== -1 ? (row[colIdx.legal] || '') : '';
+      legal = legal ? String(legal).trim() : 'Без юрлица';
+
+      var planDateRaw = colIdx.planDate !== -1 ? row[colIdx.planDate] : null;
+      var planDaysRaw = colIdx.planDays !== -1 ? row[colIdx.planDays] : null;
+      var factDateRaw = colIdx.factDate !== -1 ? row[colIdx.factDate] : null;
+      var factDaysRaw = colIdx.factDays !== -1 ? row[colIdx.factDays] : null;
+
+      var planDate = toDateOrNull(planDateRaw);
+      var planDays = (typeof planDaysRaw === 'number') ? planDaysRaw : (parseFloat(planDaysRaw) || 0);
+
+      var factDate = null;
+      var factNote = null;
+      if(factDateRaw instanceof Date || typeof factDateRaw === 'number'){
+        factDate = toDateOrNull(factDateRaw);
+      } else if(typeof factDateRaw === 'string' && factDateRaw.trim() !== ''){
+        var parsed = toDateOrNull(factDateRaw);
+        if(parsed) factDate = parsed;
+        else factNote = factDateRaw.trim();
+      }
+
+      var factDays = (typeof factDaysRaw === 'number') ? factDaysRaw : (parseFloat(factDaysRaw) || 0);
+      if(factDate && !factDays) factDays = planDays;
+
+      if(!employeesByFio[fio]){
+        employeesByFio[fio] = {
+          fio: fio,
+          position: String(position || '').trim(),
+          legal: legal,
+          periods: []
+        };
+        order.push(fio);
+      }
+
+      employeesByFio[fio].periods.push({
+        planStart: planDate ? toISO(planDate) : null,
+        planDays: planDays ? Math.round(planDays) : 0,
+        factStart: factDate ? toISO(factDate) : null,
+        factDays: factDays ? Math.round(factDays) : 0,
+        factNote: factNote,
+        dept: String(dept || '').trim()
+      });
+    }
+
+    var employees = order.map(function(fio){ return employeesByFio[fio]; });
+    employees.forEach(function(e){
+      var planTotal = 0, factTotal = 0;
+      e.periods.forEach(function(p){ planTotal += p.planDays; factTotal += p.factDays; });
+      e.planTotal = planTotal;
+      e.factTotal = factTotal;
+      e.diff = planTotal - factTotal;
+    });
+
+    if(employees.length === 0){
+      throw new Error('В файле не найдено ни одной строки с сотрудниками.');
+    }
+
+    var legalEntities = Array.from(new Set(employees.map(function(e){ return e.legal; }))).sort(function(a,b){
+      return a.localeCompare(b, 'ru');
+    });
+
+    return {employees: employees, legalEntities: legalEntities};
+  }
+
+  function handleExcelFile(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try {
+        var data = new Uint8Array(e.target.result);
+        var workbook = XLSX.read(data, {type:'array', cellDates:true});
+        var parsed = parseWorkbookToEmployees(workbook);
+        loadDataset(parsed.employees, parsed.legalEntities, file.name);
+        render();
+      } catch(err){
+        alert('Не удалось загрузить файл: ' + err.message);
+      }
+    };
+    reader.onerror = function(){
+      alert('Не удалось прочитать файл.');
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ===== init =====
+  loadDataset(raw.employees, raw.legalEntities, 'встроенные данные');
+  render();
+})();
+
+</script>
+</body>
+</html>
